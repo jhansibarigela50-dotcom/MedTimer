@@ -1,8 +1,10 @@
 
-# MedTimer – Daily Medicine Companion (Safe Mode Build)
-# - Emoji rewards by default; Turtle code kept and only used locally if explicitly enabled
-# - PDF report (optional, via reportlab); automatic CSV fallback
-# - Defensive fallbacks to avoid UI-breaking errors
+# MedTimer – Daily Medicine Companion
+# Final build:
+# - Emoji rewards by default (no warnings); Turtle code kept and only used locally if explicitly enabled
+# - PDF report (optional via reportlab); automatic CSV fallback
+# - Index AND ID column hidden from the visible table, while ID is kept internally for actions
+# - Defensive fallbacks so the UI renders cleanly in Streamlit Cloud and locally
 
 import streamlit as st
 import pandas as pd
@@ -14,7 +16,7 @@ import os
 import wave
 import struct
 
-# Graphics libs
+# Graphics
 from PIL import Image
 try:
     import turtle
@@ -22,7 +24,7 @@ try:
 except Exception:
     HAS_TURTLE = False
 
-# Optional PDF libs
+# Optional PDF deps (gracefully handled)
 try:
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen import canvas
@@ -283,21 +285,25 @@ ensure_today_logs()
 
 if st.session_state.schedule:
     df = pd.DataFrame(st.session_state.schedule)
-    df_display = df[['id', 'name', 'time_str']].rename(columns={'id': 'ID', 'name': 'Medicine', 'time_str': 'Time'})
-    # Hide index safely (fallback for older Streamlit)
+
+    # Drop the ID column for display (but keep it in session_state for actions)
+    df_display = df[['name', 'time_str']].rename(columns={'name': 'Medicine', 'time_str': 'Time'})
+
+    # Hide the index safely (fallback for older Streamlit)
     try:
         st.dataframe(df_display, use_container_width=True, hide_index=True)
     except TypeError:
         st.dataframe(df_display.style.hide_index(), use_container_width=True)
 
+    # Per-row controls with clean labels (keys still use ID internally)
     for m in st.session_state.schedule:
         c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
         with c1:
             st.markdown("**{}** at {}".format(m['name'], m['time_str']))
         with c2:
-            new_name = st.text_input("Rename #{}".format(m['id']), value=m['name'], key="rename_{}".format(m['id']))
+            new_name = st.text_input("Rename", value=m['name'], key="rename_{}".format(m['id']))
         with c3:
-            new_time = st.time_input("Time #{}".format(m['id']), value=parse_time_str(m['time_str']), key="retime_{}".format(m['id']))
+            new_time = st.time_input("Time", value=parse_time_str(m['time_str']), key="retime_{}".format(m['id']))
         with c4:
             colA, colB = st.columns(2)
             with colA:
@@ -307,7 +313,7 @@ if st.session_state.schedule:
             with colB:
                 if st.button("Delete", key="del_{}".format(m['id'])):
                     delete_medicine(m['id'])
-                    st.toast("Deleted medicine", icon='🗑️')
+                    st.toast("Deleted", icon='🗑️')
 else:
     st.info("No medicines yet—add your first dose above.")
 
@@ -325,7 +331,7 @@ for m in st.session_state.schedule:
     if lg:
         lg['status'] = status
 
-# Render checklist rows
+# Render checklist rows (no ID shown)
 for m in st.session_state.schedule:
     today_str = date.today().isoformat()
     lg = next((x for x in st.session_state.logs if x['id'] == m['id'] and x['date_str'] == today_str), None)
