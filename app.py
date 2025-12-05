@@ -57,7 +57,6 @@ def can_use_turtle() -> bool:
     """Return True only if turtle can draw (non-headless environment)."""
     if not HAS_TURTLE:
         return False
-    # On most cloud deployments, DISPLAY is unset -> headless
     if os.environ.get('DISPLAY') is None:
         return False
     return True
@@ -75,7 +74,6 @@ def add_medicine(name: str, sched_time: time):
 def delete_medicine(mid: int):
     st.session_state.schedule = [m for m in st.session_state.schedule if m['id'] != mid]
     today_str = date.today().isoformat()
-    # remove today's log for that medicine (keep historical ones intact)
     st.session_state.logs = [lg for lg in st.session_state.logs if not (lg['id'] == mid and lg['date_str'] == today_str)]
 
 def edit_medicine(mid: int, new_name: str, new_time: time):
@@ -270,7 +268,6 @@ def build_weekly_report_csv() -> str:
         df = pd.DataFrame(columns=['date_str','name','scheduled_time','status','taken_at'])
     adherence = weekly_adherence()
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
-    # Use concatenation to avoid any f-string parsing issues altogether
     header = "# MedTimer Weekly Report (generated " + ts + "); Adherence: " + "{:.1f}".format(adherence) + "%\n"
     return header + df.to_csv(index=False)
 
@@ -283,12 +280,12 @@ colL, colR = st.columns([3, 2])
 with colR:
     st.subheader("Tips & Motivation")
     st.write(random.choice(DEFAULT_TIPS))
+    # Show an emoji banner (actual emojis)
+    st.markdown("<div style='font-size:28px'>🏆  😊  👍  🌱</div>", unsafe_allow_html=True)
     st.write("\n")
-    st.caption("Rewards shown as emojis by default. Turtle available locally (optional).")
     prefer_turtle = False
     if can_use_turtle():
         prefer_turtle = st.checkbox("Prefer Turtle rewards (advanced, local only)", value=False)
-    # No warning shown when Turtle is unavailable—code still keeps Turtle logic.
 
 with colL:
     st.subheader("Add a daily medicine")
