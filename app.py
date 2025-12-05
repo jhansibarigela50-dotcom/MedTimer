@@ -1,4 +1,9 @@
 
+# MedTimer – Daily Medicine Companion (Safe Mode Build)
+# - Emoji rewards by default; Turtle code kept and only used locally if explicitly enabled
+# - PDF report (optional, via reportlab); automatic CSV fallback
+# - Defensive fallbacks to avoid UI-breaking errors
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime, date, time, timedelta
@@ -9,7 +14,7 @@ import os
 import wave
 import struct
 
-# Graphics
+# Graphics libs
 from PIL import Image
 try:
     import turtle
@@ -17,7 +22,7 @@ try:
 except Exception:
     HAS_TURTLE = False
 
-# Optional PDF deps (gracefully handled)
+# Optional PDF libs
 try:
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen import canvas
@@ -26,9 +31,7 @@ try:
 except Exception:
     HAS_REPORTLAB = False
 
-# ----------------------------------------------------------------------
-# App config
-# ----------------------------------------------------------------------
+# ------------------------- App config -------------------------
 st.set_page_config(page_title="MedTimer – Daily Medicine Companion", page_icon="🕒", layout="wide")
 
 DEFAULT_TIPS = [
@@ -39,7 +42,7 @@ DEFAULT_TIPS = [
     "Place your medicine box where you can easily see it.",
 ]
 
-# Session state
+# Session state init
 if 'schedule' not in st.session_state:
     st.session_state.schedule = []  # List[Dict]: {id, name, time_str}
 if 'logs' not in st.session_state:
@@ -50,20 +53,13 @@ if 'next_id' not in st.session_state:
 UPCOMING_WINDOW_MIN = 60
 BEEP_WINDOW_MIN = 5
 
-# ----------------------------------------------------------------------
-# Turtle availability check
-# ----------------------------------------------------------------------
+# ------------------------- Helpers -------------------------
 def can_use_turtle() -> bool:
     """Return True only if turtle can draw (non-headless environment)."""
     if not HAS_TURTLE:
         return False
-    if os.environ.get('DISPLAY') is None:
-        return False
-    return True
+    return os.environ.get('DISPLAY') is not None
 
-# ----------------------------------------------------------------------
-# Domain logic
-# ----------------------------------------------------------------------
 def add_medicine(name: str, sched_time: time):
     mid = st.session_state.next_id
     st.session_state.next_id += 1
@@ -74,7 +70,9 @@ def add_medicine(name: str, sched_time: time):
 def delete_medicine(mid: int):
     st.session_state.schedule = [m for m in st.session_state.schedule if m['id'] != mid]
     today_str = date.today().isoformat()
-    st.session_state.logs = [lg for lg in st.session_state.logs if not (lg['id'] == mid and lg['date_str'] == today_str)]
+    # Remove only today's log for that medicine (keep historical)
+    st.session_state.logs = [lg for lg in st.session_state.logs
+                             if not (lg['id'] == mid and lg['date_str'] == today_str)]
 
 def edit_medicine(mid: int, new_name: str, new_time: time):
     tstr = new_time.strftime('%H:%M')
@@ -128,13 +126,10 @@ def weekly_adherence() -> float:
                 taken += 1
     return 0.0 if scheduled == 0 else (taken / scheduled) * 100.0
 
-# ----------------------------------------------------------------------
-# Alerts & Audio
-# ----------------------------------------------------------------------
 def doses_due_soon(now: datetime):
     due = []
+    today_str = date.today().isoformat()
     for m in st.session_state.schedule:
-        today_str = date.today().isoformat()
         lg = next((x for x in st.session_state.logs if x['id'] == m['id'] and x['date_str'] == today_str), None)
         if lg and lg['status'] != 'taken':
             sched_dt = datetime.combine(date.today(), parse_time_str(m['time_str']))
@@ -157,36 +152,28 @@ def generate_beep_wav(seconds: float = 0.6, freq: float = 880.0, volume: float =
             wf.writeframes(struct.pack('<h', int(sample * 32767)))
     return buf.getvalue()
 
-# ----------------------------------------------------------------------
-# Rewards (Turtle kept; Emoji default)
-# ----------------------------------------------------------------------
+# ------------------------- Rewards (Turtle kept; Emoji default) -------------------------
 def draw_reward_image(kind: str = 'smiley', prefer_turtle: bool = False) -> Image.Image:
     """Turtle/PIL drawing kept in code; used only when explicitly enabled locally."""
     if prefer_turtle and can_use_turtle():
         try:
             screen = turtle.Screen()
             screen.setup(width=300, height=300)
-            t = turtle.Turtle()
-            t.hideturtle()
-            t.speed(0)
-            t.width(4)
+            t = turtle.Turtle(); t.hideturtle(); t.speed(0); t.width(4)
             if kind == 'smiley':
                 t.penup(); t.goto(0, -80); t.pendown(); t.color('gold'); t.begin_fill(); t.circle(100); t.end_fill()
                 t.penup(); t.color('black'); t.goto(-40, 30); t.pendown(); t.begin_fill(); t.circle(10); t.end_fill()
                 t.penup(); t.goto(40, 30); t.pendown(); t.begin_fill(); t.circle(10); t.end_fill()
                 t.penup(); t.goto(-50, -10); t.pendown(); t.setheading(-60)
-                for _ in range(60):
-                    t.forward(2); t.left(2)
+                for _ in range(60): t.forward(2); t.left(2)
             else:
                 t.penup(); t.goto(-50, -50); t.pendown(); t.color('gold'); t.begin_fill()
-                for _ in range(2):
-                    t.forward(100); t.left(90); t.forward(80); t.left(90)
+                for _ in range(2): t.forward(100); t.left(90); t.forward(80); t.left(90)
                 t.end_fill()
                 t.penup(); t.goto(-70, 10); t.pendown(); t.circle(20)
                 t.penup(); t.goto(70, 10); t.pendown(); t.circle(20)
                 t.penup(); t.goto(-30, -70); t.pendown(); t.color('sienna'); t.begin_fill()
-                for _ in range(2):
-                    t.forward(60); t.left(90); t.forward(20); t.left(90)
+                for _ in range(2): t.forward(60); t.left(90); t.forward(20); t.left(90)
                 t.end_fill()
             cv = screen.getcanvas()
             ps = cv.postscript(colormode='color')
@@ -212,21 +199,15 @@ def draw_reward_image(kind: str = 'smiley', prefer_turtle: bool = False) -> Imag
     return img
 
 def render_reward_emoji(score: float) -> None:
-    """Show big emojis instead of turtle graphics by default (Streamlit-safe)."""
-    if score >= 92:
-        emoji, msg = "🏆", "Fantastic adherence!"
-    elif score >= 80:
-        emoji, msg = "😊", "Great job! Keep it up."
-    elif score >= 60:
-        emoji, msg = "👍", "Nice progress—keep going!"
-    else:
-        emoji, msg = "🌱", "Build your streak and unlock rewards."
+    """Show big emojis instead of turtle graphics by default."""
+    if score >= 92:  emoji, msg = "🏆", "Fantastic adherence!"
+    elif score >= 80: emoji, msg = "😊", "Great job! Keep it up."
+    elif score >= 60: emoji, msg = "👍", "Nice progress—keep going!"
+    else:            emoji, msg = "🌱", "Build your streak and unlock rewards."
     st.markdown("<div style='font-size:72px; line-height:1'>{}</div>".format(emoji), unsafe_allow_html=True)
     st.caption(msg)
 
-# ----------------------------------------------------------------------
-# Reports (PDF optional; CSV fallback)
-# ----------------------------------------------------------------------
+# ------------------------- Reports -------------------------
 def build_weekly_report_pdf() -> bytes:
     if not HAS_REPORTLAB:
         return None
@@ -271,15 +252,153 @@ def build_weekly_report_csv() -> str:
     header = "# MedTimer Weekly Report (generated " + ts + "); Adherence: " + "{:.1f}".format(adherence) + "%\n"
     return header + df.to_csv(index=False)
 
-# ----------------------------------------------------------------------
-# UI
-# ----------------------------------------------------------------------
+# ------------------------- UI -------------------------
 st.title("🕒 MedTimer – Daily Medicine Companion")
 
+# Right panel (tips + emoji banner + optional turtle toggle)
 colL, colR = st.columns([3, 2])
 with colR:
     st.subheader("Tips & Motivation")
     st.write(random.choice(DEFAULT_TIPS))
-    # Show an emoji banner (actual emojis)
     st.markdown("<div style='font-size:28px'>🏆  😊  👍  🌱</div>", unsafe_allow_html=True)
     st.write("\n")
+    prefer_turtle = False
+    if can_use_turtle():
+        prefer_turtle = st.checkbox("Prefer Turtle rewards (advanced, local only)", value=False)
+
+# Left panel (add medicine form)
+with colL:
+    st.subheader("Add a daily medicine")
+    with st.form("add_form", clear_on_submit=True):
+        name = st.text_input("Medicine name", placeholder="e.g., Metformin 500mg")
+        sched = st.time_input("Scheduled time", value=time(9, 0))
+        submitted = st.form_submit_button("Add medicine")
+    if submitted and name.strip():
+        add_medicine(name, sched)
+        st.success("Added: {} at {}".format(name, sched.strftime('%H:%M')))
+
+st.divider()
+st.subheader("Manage medicines")
+ensure_today_logs()
+
+if st.session_state.schedule:
+    df = pd.DataFrame(st.session_state.schedule)
+    df_display = df[['id', 'name', 'time_str']].rename(columns={'id': 'ID', 'name': 'Medicine', 'time_str': 'Time'})
+    # Hide index safely (fallback for older Streamlit)
+    try:
+        st.dataframe(df_display, use_container_width=True, hide_index=True)
+    except TypeError:
+        st.dataframe(df_display.style.hide_index(), use_container_width=True)
+
+    for m in st.session_state.schedule:
+        c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
+        with c1:
+            st.markdown("**{}** at {}".format(m['name'], m['time_str']))
+        with c2:
+            new_name = st.text_input("Rename #{}".format(m['id']), value=m['name'], key="rename_{}".format(m['id']))
+        with c3:
+            new_time = st.time_input("Time #{}".format(m['id']), value=parse_time_str(m['time_str']), key="retime_{}".format(m['id']))
+        with c4:
+            colA, colB = st.columns(2)
+            with colA:
+                if st.button("Save", key="save_{}".format(m['id'])):
+                    edit_medicine(m['id'], new_name, new_time)
+                    st.toast("Saved changes", icon='✅')
+            with colB:
+                if st.button("Delete", key="del_{}".format(m['id'])):
+                    delete_medicine(m['id'])
+                    st.toast("Deleted medicine", icon='🗑️')
+else:
+    st.info("No medicines yet—add your first dose above.")
+
+# ------------------------- Daily checklist -------------------------
+st.divider()
+st.subheader("Today's checklist")
+now = datetime.now()
+
+# Update today's log statuses
+for m in st.session_state.schedule:
+    today_str = date.today().isoformat()
+    lg = next((x for x in st.session_state.logs if x['id'] == m['id'] and x['date_str'] == today_str), None)
+    taken = (lg and lg['status'] == 'taken')
+    status = compute_status(now, parse_time_str(m['time_str']), taken)
+    if lg:
+        lg['status'] = status
+
+# Render checklist rows
+for m in st.session_state.schedule:
+    today_str = date.today().isoformat()
+    lg = next((x for x in st.session_state.logs if x['id'] == m['id'] and x['date_str'] == today_str), None)
+    taken = (lg and lg['status'] == 'taken')
+    status = lg['status'] if lg else 'upcoming'
+    c1, c2, c3 = st.columns([3, 2, 2])
+    with c1:
+        st.markdown("**{}** at {}".format(m['name'], m['time_str']))
+    with c2:
+        badge_color = '#3CB371' if status == 'taken' else ('#FFC107' if status == 'upcoming' else '#E74C3C')
+        st.markdown("<span style='background:{}; color:white; padding:4px 8px; border-radius:12px; font-weight:600;'>{}</span>"
+                    .format(badge_color, status.title()), unsafe_allow_html=True)
+    with c3:
+        if not taken:
+            if st.button("Mark taken", key="taken_{}".format(m['id'])):
+                mark_taken(m['id'])
+                st.success("Marked taken: {}".format(m['name']))
+        else:
+            st.button("Taken ✅", key="taken_done_{}".format(m['id']), disabled=True)
+
+# ------------------------- Alerts -------------------------
+due = doses_due_soon(now)
+if len(due) > 0:
+    st.warning("Upcoming dose soon: {}".format(', '.join(["{} ({} min)".format(n, mins) for n, mins in due])))
+    st.audio(generate_beep_wav(), format='audio/wav')
+
+# ------------------------- Weekly adherence + rewards -------------------------
+st.divider()
+st.subheader("Weekly adherence")
+score = weekly_adherence()
+st.progress(min(score/100.0, 1.0), text="Adherence: {:.1f}% (last 7 days)".format(score))
+
+if can_use_turtle() and prefer_turtle:
+    reward_kind = 'trophy' if score >= 92 else ('smiley' if score >= 80 else None)
+    if reward_kind:
+        img = draw_reward_image(reward_kind, prefer_turtle=True)
+        st.image(img, caption="Reward unlocked!")
+    else:
+        st.caption("Build your streak to unlock turtle rewards.")
+else:
+    render_reward_emoji(score)
+
+# ------------------------- Reports -------------------------
+st.divider()
+st.subheader("Download weekly report")
+if HAS_REPORTLAB:
+    pdf_bytes = build_weekly_report_pdf()
+    if pdf_bytes:
+        st.download_button("Download PDF", data=pdf_bytes,
+                           file_name="MedTimer_Weekly_Report.pdf", mime="application/pdf")
+else:
+    csv_str = build_weekly_report_csv()
+    st.download_button("Download CSV", data=csv_str,
+                       file_name="MedTimer_Weekly_Report.csv", mime="text/csv")
+
+# ------------------------- Testing tools -------------------------
+with st.expander("Testing tools"):
+    if st.button("Generate sample week data"):
+        base_ids = [m['id'] for m in st.session_state.schedule]
+        names_map = {m['id']: m['name'] for m in st.session_state.schedule}
+        times_map = {m['id']: m['time_str'] for m in st.session_state.schedule}
+        for d_off in range(1, 7):
+            d = date.today() - timedelta(days=d_off)
+            d_str = d.isoformat()
+            for mid in base_ids:
+                st.session_state.logs.append({
+                    'id': mid,
+                    'name': names_map[mid],
+                    'date_str': d_str,
+                    'scheduled_time': times_map[mid],
+                    'status': 'taken' if random.random() < 0.75 else 'missed',
+                    'taken_at': times_map[mid] if random.random() < 0.75 else None,
+                })
+        st.success("Sample week data generated.")
+
+st.caption("Designed for clarity, comfort, and gentle motivation—MedTimer helps turn routines into healthy habits.")
