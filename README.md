@@ -13,10 +13,12 @@ MedTimer is a medicine tracking app that helps users, often the elderly, but ope
   
 * Weekly Reports: A ready to download pdf of the user's weekly reports consists of an easy to follow summary of their weekly consistancy with their medication. This report can be shared with the user's caregiver or doctor for them to efficiently keep track of their patients medication data.
 
-  **Integration Details**
-  Github manages all of development and version controls for this app. The Github repository stores all the code in the app.py file which allows for branching, pull requests, and issue tracking. This system allows streamlit to identify updates, bug fixes, and additional features making the codebase organized and maintainable over time.
+**Integration Details**
+
+Github manages all of development and version controls for this app. The Github repository stores all the code in the app.py file which allows for branching, pull requests, and issue tracking. This system allows streamlit to identify updates, bug fixes, and additional features making the codebase organized and maintainable over time.
 
 **Development Details**
+
 For deployment Streamlit is linked to the Github repository to extract the code from the app.py file. The required apps that Streamlit has to use for the code are described in the requirements.txt file. Streamlit has simple tools for building the interface, saving progress, and integrating downloadable PDFs to ensure the app works smoothly and stays user friendly.
 
 Click here to use app!
