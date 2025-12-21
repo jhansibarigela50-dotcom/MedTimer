@@ -1,4 +1,11 @@
 # MedTimer
+# Unit 2: Python Programming
+# Candidate Name: Jhansi Barigela
+# Candidate Registration Number: 1000480
+# CRS: Artificial Intelligence
+# Course Name: Python Programming: Designing and Deploying Interactive Python Applications for Social Good
+# School Name: Birla Open Minds Internation School, Kollur, Hyderabad
+
 
 **About the App**
 
