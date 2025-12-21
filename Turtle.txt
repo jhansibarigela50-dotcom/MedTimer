@@ -1,0 +1,72 @@
+Below is the working Turtle Code mentioned in the readme file.
+
+import turtle
+
+# Screen setup
+screen = turtle.Screen()
+screen.setup(800, 400)
+screen.bgcolor("white")
+
+t = turtle.Turtle()
+t.hideturtle()
+t.speed(0)
+
+# ---------- Smiley Face ----------
+def draw_smiley(x, y, radius):
+    t.penup()
+    t.goto(x, y - radius)
+    t.setheading(0)
+    t.pendown()
+
+    # Face
+    t.color("gold", "gold")
+    t.begin_fill()
+    t.circle(radius)
+    t.end_fill()
+
+    # Eyes
+    eye_offset_x = radius * 0.4
+    eye_offset_y = radius * 0.3
+    eye_radius = radius * 0.1
+
+    for side in [-1, 1]:
+        t.penup()
+        t.goto(x + side * eye_offset_x, y + eye_offset_y)
+        t.pendown()
+        t.color("black")
+        t.begin_fill()
+        t.circle(eye_radius)
+        t.end_fill()
+
+    # Smile
+    t.penup()
+    t.goto(x - radius * 0.4, y - radius * 0.1)
+    t.setheading(-60)
+    t.pendown()
+    t.width(4)
+    t.circle(radius * 0.6, 120)
+
+# ---------- Star ----------
+def draw_star(x, y, face_radius):
+    size = face_radius * 0.9  # proportional to smiley
+
+    t.penup()
+    t.goto(x, y)
+    t.setheading(90)
+    t.pendown()
+
+    t.width(4)
+    t.color("gold", "gold")
+    t.begin_fill()
+    for _ in range(5):
+        t.forward(size)
+        t.right(144)
+    t.end_fill()
+
+# ---------- Draw Everything ----------
+FACE_RADIUS = 70
+
+draw_smiley(-200, 0, FACE_RADIUS)
+draw_star(200, -20, FACE_RADIUS)
+
+turtle.done()
