@@ -36,4 +36,14 @@ https://medtimer-q5i8ts6pjlqnk8gghambkk.streamlit.app/#med-timer-daily-medicine-
 Streamlit does not support Turtle code so the code implemented utilizes emoji's as moscots and motivation for the user in place of the turtle graphics. Below is an image of the working Turtle code shown through Spyder creating an image of an emoji and trophy.
 <img width="1590" height="782" alt="image" src="https://github.com/user-attachments/assets/983d1957-f916-4fec-ad97-98f5e10683c2" />
 
+The working turtle code can be found in the Turtle code file.
+
+App Screenshots
+
+<img width="2670" height="848" alt="image" src="https://github.com/user-attachments/assets/d58f1d79-1ffd-4a72-9b0f-4543239aae53" />
+<img width="2708" height="784" alt="image" src="https://github.com/user-attachments/assets/3a37e732-d9a2-4ea6-b1e4-42606890aa6b" />
+<img width="2716" height="606" alt="image" src="https://github.com/user-attachments/assets/30181428-4592-4a52-9da2-3e1ff63ade36" />
+<img width="2612" height="546" alt="image" src="https://github.com/user-attachments/assets/bf8a2bd9-b56a-4bcf-848d-55d61b65202e" />
+<img width="2598" height="284" alt="image" src="https://github.com/user-attachments/assets/1cc8a25c-2fc9-4487-a2fd-f5b0d81e777c" />
+
 
