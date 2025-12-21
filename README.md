@@ -38,7 +38,7 @@ Streamlit does not support Turtle code so the code implemented utilizes emoji's 
 
 The working turtle code can be found in the Turtle code file.
 
-App Screenshots
+**App Screenshots**
 
 <img width="2670" height="848" alt="image" src="https://github.com/user-attachments/assets/d58f1d79-1ffd-4a72-9b0f-4543239aae53" />
 <img width="2708" height="784" alt="image" src="https://github.com/user-attachments/assets/3a37e732-d9a2-4ea6-b1e4-42606890aa6b" />
